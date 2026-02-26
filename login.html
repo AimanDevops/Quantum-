@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UMT Student Portal | Secure Login</title>
+    <style>
+        :root { --primary: #002147; --accent: #cfa052; --bg: #f8f9fa; --text: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); }
+
+```
+    .brand-section { width: 40%; background: var(--primary); color: white; display: flex; flex-direction: column; justify-content: center; padding: 50px; background-image: linear-gradient(rgba(0,33,71,0.9), rgba(0,33,71,0.9)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/UMT_Logo.png/800px-UMT_Logo.png'); background-size: cover; }
+    .brand-section h1 { font-size: 3rem; margin-bottom: 10px; color: var(--accent); }
+    
+    .login-section { width: 60%; display: flex; align-items: center; justify-content: center; position: relative; }
+    .login-card { width: 420px; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 5px solid var(--accent); text-align: center; }
+    
+    .cam-wrapper { position: relative; width: 100%; height: 220px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; border: 2px solid #ddd; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .verified { border-color: #28a745 !important; box-shadow: 0 0 15px rgba(40, 167, 69, 0.5); }
+    .locked { border-color: #dc3545 !important; box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); }
+    
+    #quantumBar { height: 4px; background: #eee; width: 100%; margin-bottom: 15px; display: none; }
+    #quantumFill { height: 100%; background: var(--primary); width: 0%; transition: width 1s; }
+
+    input { width: 90%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+    button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 10px; font-weight: bold; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+
+    .mic-btn { background: white; color: var(--primary); border: 2px solid var(--primary); border-radius: 50px; padding: 8px 20px; margin-bottom: 15px; width: auto; font-size: 0.9rem; }
+    .mic-active { background: var(--accent); color: black; border-color: var(--accent); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+</style>
+```
+
+</head>
+<body>
+
+<div class="brand-section">
+    <h1>UMT Portal</h1>
+    <p>Quantum-Secure Authentication Module (QSAM)</p>
+</div>
+
+<div class="login-section">
+<div class="login-card">
+<h2>Student Login</h2>
+<button class="mic-btn" id="micBtn" onclick="startListening()">🎤 Enable Voice (Spacebar)</button>
+
+<div class="cam-wrapper" id="camBox">
+<video id="video" autoplay muted playsinline></video>
+<canvas id="canvas" style="display:none;"></canvas>
+</div>
+
+<div id="status" style="color: #dc3545; font-weight: bold; font-size: 0.9rem;">⚠️ Face Verification Required</div>
+
+<div id="quantumBar"><div id="quantumFill"></div></div>
+<small id="keyText" style="display:none; color: var(--primary);">Generating Quantum Key...</small>
+
+<input type="text" id="user" placeholder="NetID / Username" disabled>
+<input type="password" id="pass" placeholder="Password" disabled>
+<button id="btn" disabled>SECURE LOGIN</button>
+</div>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const status = document.getElementById('status');
+const camBox = document.getElementById('camBox');
+let isSecure = false;
+
+window.onload = function() {
+    document.getElementById('micBtn').focus();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Welcome. Press Spacebar to speak."));
+};
+
+document.body.onkeyup = e => { if(e.keyCode == 32) startListening(); }
+
+navigator.mediaDevices.getUserMedia({ video: true }).then(s => {
+    video.srcObject = s;
+    setInterval(detectFace, 1000);
+});
+
+function detectFace() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    fetch('/detect_face', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({image: canvas.toDataURL('image/jpeg')})
+    }).then(res=>res.json()).then(data => {
+        if(data.face_detected) {
+            if(!isSecure) {
+                isSecure = true;
+                camBox.classList.add('verified');
+                status.innerText = "✅ Biometric Verified";
+                status.style.color = "#28a745";
+                triggerQuantum();
+            }
+        } else {
+            if(isSecure) {
+                isSecure = false;
+                camBox.classList.remove('verified');
+                camBox.classList.add('locked');
+                status.innerText = "⚠️ Face Lost! System Locked.";
+                toggleInputs(true);
+            }
+        }
+    });
+}
+
+function triggerQuantum() {
+    if(!isSecure) return;
+    document.getElementById('quantumBar').style.display = 'block';
+
+    fetch('/get_quantum_key').then(res=>res.json()).then(data => {
+        setTimeout(() => document.getElementById('quantumFill').style.width = "100%", 100);
+
+        setTimeout(() => {
+            if(isSecure) {
+                document.getElementById('keyText').style.display = 'block';
+                document.getElementById('keyText').innerText =
+                    `Quantum Encrypted: ${data.key.substring(0,10)}...`;
+                toggleInputs(false);
+                speak("Face Verified.");
+            }
+        }, 1000);
+    });
+}
+
+function toggleInputs(disabled) {
+    document.getElementById('user').disabled = disabled;
+    document.getElementById('pass').disabled = disabled;
+    document.getElementById('btn').disabled = disabled;
+}
+
+document.getElementById('btn').onclick = function() {
+    const u = document.getElementById('user').value;
+    const p = document.getElementById('pass').value;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            username: u,
+            password: p,
+            image: canvas.toDataURL('image/jpeg')
+        })
+    })
+    .then(res=>res.json())
+    .then(data => {
+
+        if(data.success) {
+
+            // ✅ QUANTUM VERIFICATION STEP
+            const quantum_key = data.quantum_key;
+
+            fetch('/quantum_verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({key: quantum_key})
+            })
+            .then(res=>res.json())
+            .then(qdata => {
+                if(qdata.success) {
+                    speak("Access Granted.");
+                    setTimeout(() => window.location.href="/dashboard", 1500);
+                } else {
+                    alert("Quantum verification failed!");
+                }
+            });
+
+        } else {
+            alert(data.message);
+            speak("Login failed.");
+        }
+
+    });
+};
+
+function startListening() {
+    if (!('webkitSpeechRecognition' in window)) return;
+    const rec = new webkitSpeechRecognition();
+    rec.lang = 'en-US';
+    rec.start();
+
+    document.getElementById('micBtn').classList.add('mic-active');
+
+    rec.onresult = function(e) {
+        let txt = e.results[0][0].transcript.replace(/[.,\s]/g, '');
+
+        if (e.results[0][0].transcript.toLowerCase().includes("login")) {
+            document.getElementById('btn').click();
+        } else if (!document.getElementById('user').value) {
+            document.getElementById('user').value = txt;
+        } else {
+            document.getElementById('pass').value = txt;
+        }
+
+        document.getElementById('micBtn').classList.remove('mic-active');
+    };
+}
+
+function speak(t) {
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+}
+</script>
+
+</body>
+</html>

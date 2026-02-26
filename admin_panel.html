@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Site Administration | UMT Moodle</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f2f2f2; }
+        .navbar { background-color: #0f6cb4; } 
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .nav-tabs .nav-link { cursor: pointer; color: #495057; }
+        .nav-tabs .nav-link.active { font-weight: bold; border-top: 3px solid #0f6cb4; }
+
+        /* AI Ranking Styles */
+        .rank-badge { 
+            width: 35px; height: 35px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white;
+        }
+        .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); }
+        .rank-3 { background: linear-gradient(135deg, #CD7F32, #B87333); }
+        .rank-other { background: #6c757d; }
+
+        .sentiment-very-positive { color: #28a745; font-weight: bold; }
+        .sentiment-positive { color: #5cb85c; }
+        .sentiment-neutral { color: #6c757d; }
+        .sentiment-negative { color: #dc3545; }
+        .sentiment-very-negative { color: #721c24; font-weight: bold; }
+
+        /* Alert Styles */
+        .alert-card {
+            border-left: 4px solid;
+            padding: 15px; margin-bottom: 10px;
+            background: white; border-radius: 4px;
+        }
+        .alert-high { border-left-color: #dc3545; }
+        .alert-medium { border-left-color: #ffc107; }
+        .alert-low { border-left-color: #17a2b8; }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 3px 10px;
+            border-radius: 12px; font-size: 0.75rem;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+    <nav class="navbar navbar-dark navbar-expand-lg px-3">
+        <a class="navbar-brand" href="#">UMT Moodle Admin</a>
+        <div class="ms-auto">
+            <span class="ai-badge me-3"><i class="fas fa-robot"></i> AI Powered</span>
+            <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item"><a class="nav-link active" onclick="showTab('users', this)">Users</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab('courses', this)">Courses</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab('grades', this)">Grades</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab('feedback', this)">Teacher Feedback</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab('rankings', this)"><i class="fas fa-trophy text-warning"></i> AI Rankings</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="showTab('alerts', this)"><i class="fas fa-exclamation-triangle text-danger"></i> Security Alerts</a></li>
+        </ul>
+
+        <div id="users" class="tab-content active">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h5>Add New User</h5>
+                        <input type="text" id="u" class="form-control mb-2" placeholder="Username">
+                        <input type="password" id="p" class="form-control mb-2" placeholder="Password">
+                        <input type="email" id="e" class="form-control mb-2" placeholder="Email">
+                        <select id="r" class="form-select mb-2">
+                            <option value="Student">Student</option>
+                            <option value="Teacher">Teacher</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                        <button onclick="addUser()" class="btn btn-primary w-100">Create</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3">
+                        <h5>Registered Users</h5>
+                        <table class="table table-hover">
+                            <thead><tr><th>User</th><th>Email</th><th>Role</th></tr></thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr><td>{{ user[0] }}</td><td>{{ user[3] }}</td><td><span class="badge bg-secondary">{{ user[2] }}</span></td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="courses" class="tab-content">
+            <div class="card p-3">
+                <h5>Course Management</h5>
+                <table class="table table-striped">
+                    <thead class="table-dark"><tr><th>Code</th><th>Course Name</th><th>Instructor</th><th>Semester</th></tr></thead>
+                    <tbody>
+                        {% for c in courses %}
+                        <tr><td>{{ c[0] }}</td><td>{{ c[1] }}</td><td>{{ c[2] }}</td><td>{{ c[3] }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="grades" class="tab-content">
+            <div class="card p-3">
+                <h5>Gradebook Overview</h5>
+                <table class="table table-bordered">
+                    <thead><tr><th>Student ID</th><th>Course</th><th>Assessment</th><th>Score</th><th>Grade</th></tr></thead>
+                    <tbody>
+                        {% for g in grades %}
+                        <tr><td>{{ g[0] }}</td><td>{{ g[1] }}</td><td>{{ g[2] }}</td><td>{{ g[3] }}</td><td class="text-success fw-bold">{{ g[4] }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="feedback" class="tab-content">
+            <div class="card p-3">
+                <h5 class="text-danger"><i class="fas fa-bullhorn"></i> Student Feedback Reports</h5>
+                <table class="table">
+                    <thead><tr><th>Date</th><th>Student</th><th>Teacher</th><th>Rating</th><th>Comment</th><th>AI Sentiment</th></tr></thead>
+                    <tbody>
+                        {% for f in feedback %}
+                        <tr>
+                            <td>{{ f[5] }}</td>
+                            <td><b>{{ f[1] }}</b></td>
+                            <td>{{ f[2] }}</td>
+                            <td>{% for i in range(f[3]) %}<i class="fas fa-star text-warning"></i>{% endfor %}</td>
+                            <td>{{ f[4] }}</td>
+                            <td><span class="badge bg-info analyze-btn" data-comment="{{ f[4] }}"><i class="fas fa-brain"></i> Analyze</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if not feedback %}
+                <div class="alert alert-info">No feedback reports submitted yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Rankings Tab -->
+        <div id="rankings" class="tab-content">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-trophy text-warning"></i> AI-Powered Student Rankings</h5>
+                    <button onclick="refreshRankings()" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sync-alt"></i> Refresh Rankings
+                    </button>
+                </div>
+                <p class="text-muted small">
+                    <i class="fas fa-info-circle"></i> 
+                    Rankings are calculated using NLP sentiment analysis on teacher feedback (40%) combined with academic performance (60%).
+                </p>
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Rank</th>
+                            <th>Student</th>
+                            <th>Academic Score</th>
+                            <th>Sentiment Score</th>
+                            <th>Final Score</th>
+                            <th>Sentiment</th>
+                            <th>Feedback Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingsTable">
+                        {% for r in rankings %}
+                        <tr>
+                            <td>
+                                <div class="rank-badge rank-{% if r[5] == 1 %}1{% elif r[5] == 2 %}2{% elif r[5] == 3 %}3{% else %}other{% endif %}">
+                                    {{ r[5] }}
+                                </div>
+                            </td>
+                            <td><b>{{ r[1] }}</b></td>
+                            <td>{{ "%.1f"|format(r[2]) }}%</td>
+                            <td>{{ "%.1f"|format(r[3]) }}%</td>
+                            <td><span class="badge bg-primary">{{ "%.1f"|format(r[4]) }}%</span></td>
+                            <td class="sentiment-{{ r[7]|lower|replace(' ', '-') }}">{{ r[7] }}</td>
+                            <td>{{ r[8] }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not rankings %}
+                        <tr><td colspan="7" class="text-center text-muted">No rankings available. Add grades and feedback to generate rankings.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Security Alerts Tab -->
+        <div id="alerts" class="tab-content">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt text-danger"></i> AI Security Alerts</h5>
+                    <button onclick="refreshAlerts()" class="btn btn-danger btn-sm">
+                        <i class="fas fa-sync-alt"></i> Refresh Alerts
+                    </button>
+                </div>
+                <p class="text-muted small">
+                    <i class="fas fa-info-circle"></i> 
+                    Anomaly detection monitors login patterns including failed attempts, IP diversity, and unusual timing.
+                </p>
+
+                <div id="alertsContainer">
+                    {% for alert in alerts %}
+                    <div class="alert-card alert-{{ alert[5] }}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong><i class="fas fa-exclamation-circle"></i> {{ alert[3] }}</strong>
+                                <p class="mb-1">{{ alert[4] }}</p>
+                                <small class="text-muted">User: {{ alert[1] }} | {{ alert[2] }}</small>
+                            </div>
+                            <span class="badge bg-{{ 'danger' if alert[5] == 'high' else 'warning' if alert[5] == 'medium' else 'info' }}">
+                                {{ alert[5]|upper }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not alerts %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> No security alerts at this time. System is secure!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(id, link) {
+            document.querySelectorAll('.tab-content').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            link.classList.add('active');
+        }
+
+        function addUser() {
+            const u = document.getElementById('u').value, p = document.getElementById('p').value, 
+                  e = document.getElementById('e').value, r = document.getElementById('r').value;
+            fetch('/add_user', { method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                   body: JSON.stringify({username:u, password:p, email:e, role:r}) })
+            .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); else alert("Error"); });
+        }
+
+        function refreshRankings() {
+            fetch('/get_rankings')
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    location.reload();
+                }
+            });
+        }
+
+        function refreshAlerts() {
+            fetch('/get_anomaly_alerts')
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    location.reload();
+                }
+            });
+        }
+
+        // Sentiment analysis for feedback
+        document.querySelectorAll('.analyze-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const comment = this.dataset.comment;
+                fetch('/analyze_sentiment', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: comment})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.success) {
+                        this.innerHTML = `<i class="fas fa-brain"></i> ${data.label}`;
+                        this.className = `badge ${data.score > 0 ? 'bg-success' : data.score < 0 ? 'bg-danger' : 'bg-secondary'}`;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
